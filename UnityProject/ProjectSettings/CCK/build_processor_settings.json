@@ -1,0 +1,24 @@
+{
+  "ProcessorSettings": {
+    "CVR.CCKEditor.ContentBuilder.Processors.CaptureWorldPanoramic": {
+      "IsEnabled": true,
+      "CustomOrder": 10000,
+      "OverrideCallbackOrder": false
+    },
+    "CVR.CCKEditor.ContentBuilder.Processors.CCKBuildActionProcessor": {
+      "IsEnabled": true,
+      "CustomOrder": 0,
+      "OverrideCallbackOrder": false
+    },
+    "CVR.CCKEditor.ContentBuilder.Processors.EditorOnlyCleanupProcessor": {
+      "IsEnabled": true,
+      "CustomOrder": 2147483647,
+      "OverrideCallbackOrder": false
+    },
+    "CVR.CCKEditor.ContentBuilder.Processors.LegacyBuildEventsProcessor": {
+      "IsEnabled": true,
+      "CustomOrder": -1,
+      "OverrideCallbackOrder": false
+    }
+  }
+}
