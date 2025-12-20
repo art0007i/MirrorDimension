@@ -6,26 +6,26 @@ using ABI_RC.Core.Savior;
 using ABI_RC.Core.UI;
 using ABI_RC.Core.UI.UIRework.Managers;
 using ABI_RC.Helpers;
+using ABI_RC.Systems.ChatBox;
 using ABI_RC.Systems.IK;
 using ABI_RC.Systems.InputManagement;
 using ABI_RC.Systems.InputManagement.InputModules;
 using ABI_RC.Systems.InputManagement.XR;
 using HarmonyLib;
 using MelonLoader;
+using MirrorDimension;
+using MirrorDimension.Compat;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using MirrorDimension;
-using MirrorDimension.Compat;
 using UnityEngine;
-using UnityEngine.XR.Hands;
-using Valve.VR;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.UI;
-
+using UnityEngine.XR.Hands;
+using Valve.VR;
 using Object = UnityEngine.Object;
 
 [assembly: MelonInfo(
@@ -74,9 +74,8 @@ public partial class MirrorDimensionMod : MelonMod
         // both hands get glued to each other after mirror flip in one handed mode, this also persists outside of mirror mode
         // ^ I think this is because SteamVR TrackedObject tracks the last valid device it was given, even if u set it to an invalid one
 
-        InitializeModCompat<Compat.BTKUILib>(true);
+        QuickMenu.Initialize();
         InitializeModCompat<BetterFingersTracking>();
-        InitializeModCompat<ChatBox>();
 
         harmony.Patch(AccessTools.Method(cameraIndicatorType, "Start"), 
             postfix: new(AccessTools.Method(
@@ -86,7 +85,7 @@ public partial class MirrorDimensionMod : MelonMod
         ));
     }
 
-    public void InitializeModCompat<T>(bool warnOnMissing = false) where T : IModCompat, new()
+    public void InitializeModCompat<T>() where T : IModCompat, new()
     {
         var compat = new T();
         var name = compat.ModName;
@@ -103,10 +102,6 @@ public partial class MirrorDimensionMod : MelonMod
             {
                 MelonLogger.Error($"Failed to initialize {name} Compat: " + e);
             }
-        }
-        else if(warnOnMissing)
-        {
-            MelonLogger.Warning($"Mod {name} not found. You should consider installing it for a better experience.");
         }
     }
 
@@ -203,6 +198,11 @@ public partial class MirrorDimensionMod : MelonMod
         foreach (var obj in Object.FindObjectsByType(cameraIndicatorType, FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             FixCameraIndicatorPlate.Postfix(obj);
+        }
+        
+        foreach (var obj in GetAllObjects<ChatBoxBubbleBehavior>())
+        {
+            FixChatBox.Postfix(obj);
         }
 
         foreach (var obj in GetAllObjects<AudioListener>())
@@ -452,6 +452,17 @@ public partial class MirrorDimensionMod : MelonMod
             }
             catch
             { }
+        }
+    }
+    #endregion
+
+    #region Fix ChatBox
+    [HarmonyPatch(typeof(ChatBoxBubbleBehavior), nameof(ChatBoxBubbleBehavior.OnMessage))]
+    public static class FixChatBox
+    {
+        public static void Postfix(ChatBoxBubbleBehavior __instance)
+        {
+            FlipScaleSafe(__instance.textBubbleTransform.transform);
         }
     }
     #endregion

@@ -1,11 +1,14 @@
 ﻿using ABI_RC.Core.InteractionSystem;
-using BTKUILib;
+using ABI_RC.Systems.UI.UILib;
+using ABI_RC.Systems.UI.UILib.UIObjects;
+using ABI_RC.Systems.UI.UILib.UIObjects.Components;
+using MelonLoader;
 
-namespace MirrorDimension.Compat;
+namespace MirrorDimension;
 
-public class BTKUILib : IModCompat
+public static class QuickMenu
 {
-    public void Initialize()
+    public static void Initialize()
     {
         QuickMenuAPI.OnMenuRegenerate += LoadUI;
     }
@@ -41,5 +44,13 @@ public class BTKUILib : IModCompat
         {
             if (newVal != flipVideos.ToggleValue) flipVideos.ToggleValue = newVal;
         });
+    }
+
+    // yoinked from https://github.com/BTK-Development/BTKUILib/blob/c3c49e12bfa8998126412f9b556776cd504bf160/UIObjects/Category.cs#L240
+    public static ToggleButton AddMelonToggle(this Category cat, MelonPreferences_Entry<bool> entry)
+    {
+        ToggleButton toggle = cat.AddToggle(entry.DisplayName, entry.Description, entry.Value);
+        toggle.OnValueUpdated += b => entry.Value = b;
+        return toggle;
     }
 }

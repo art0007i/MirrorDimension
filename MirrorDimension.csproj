@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>art0007i</Authors>
     <RepositoryUrl>https://github.com/art0007i/MirrorDimension</RepositoryUrl>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -86,16 +86,8 @@
       <Private>False</Private>
     </Reference>
 		<!-- Optional Mod Dependencies -->
-    <Reference Include="BTKUILib.dll">
-      <HintPath>$(CVRPATH)/Mods/BTKUILib.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
 		<Reference Include="BetterFingersTracking.dll" Publicize="true">
 			<HintPath>$(CVRPATH)/Mods/BetterFingersTracking.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="Chatbox.dll"  Publicize="true">
-			<HintPath>$(CVRPATH)/Mods/Chatbox.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
   </ItemGroup>
