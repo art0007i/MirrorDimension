@@ -47,7 +47,7 @@ public class BetterFingersTracking : IModCompat
 
     public static bool HandHandlerPrefix(HandHandlerVR __instance)
     {
-        if (!MirrorDimensionMod.isFlipped) return true;
+        if (!MirrorDimensionMod.IsFlipped) return true;
 
         if (__instance.m_skeletonAction != null)
         {

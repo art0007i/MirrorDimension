@@ -40,28 +40,24 @@ using Object = UnityEngine.Object;
 [assembly: MelonPlatformDomain(MelonPlatformDomainAttribute.CompatibleDomains.MONO)]
 [assembly: MelonColor(255, 250, 202, 222)]
 [assembly: MelonAuthorColor(255, 34, 221, 136)]
-[assembly: MelonOptionalDependencies("BTKUILib")]
 
 namespace MirrorDimension;
 
 public partial class MirrorDimensionMod : MelonMod
 {
-    public static bool isFlipped = false;
+    public static bool IsFlipped = false;
     public static event Action? OnFlip;
-    public static GameObject? flipObject;
+    public static GameObject? FlipObject;
     internal static HarmonyLib.Harmony harmony = null!;
-
-    private static Type cameraIndicatorType = null!;
+    private static Type _cameraIndicatorType = null!;
 
     public override void OnInitializeMelon()
     {
         // Nightly vs Stable
-        cameraIndicatorType = typeof(PlayerSetup).Assembly.GetType("ABI_RC.Core.Player.CameraIndicatorPlate");
-        if (cameraIndicatorType == null) cameraIndicatorType = typeof(CameraIndicator);
-
+        _cameraIndicatorType = typeof(PlayerSetup).Assembly.GetType("ABI_RC.Core.Player.CameraIndicatorPlate");
+        if (_cameraIndicatorType == null) _cameraIndicatorType = typeof(CameraIndicator);
         harmony = HarmonyInstance;
         Config.Initialize();
-
         MelonCoroutines.Start(WaitForLocalPlayer());
 
         // TODO: add networked indicator to players who are using the mod
@@ -73,16 +69,14 @@ public partial class MirrorDimensionMod : MelonMod
         // Compat - PickupArmMovement: q and e buttons to extend hands should be flipped
         // both hands get glued to each other after mirror flip in one handed mode, this also persists outside of mirror mode
         // ^ I think this is because SteamVR TrackedObject tracks the last valid device it was given, even if u set it to an invalid one
-
         QuickMenu.Initialize();
         InitializeModCompat<BetterFingersTracking>();
-
-        harmony.Patch(AccessTools.Method(cameraIndicatorType, "Start"), 
+        harmony.Patch(AccessTools.Method(_cameraIndicatorType, "Start"),
             postfix: new(AccessTools.Method(
-                typeof(FixCameraIndicatorPlate),
-                nameof(FixCameraIndicatorPlate.Postfix)
-            )
-        ));
+                    typeof(FixCameraIndicatorPlate),
+                    nameof(FixCameraIndicatorPlate.Postfix)
+                )
+            ));
     }
 
     public void InitializeModCompat<T>() where T : IModCompat, new()
@@ -105,7 +99,6 @@ public partial class MirrorDimensionMod : MelonMod
         }
     }
 
-
     public override void OnUpdate()
     {
         if (Config.AllowKeybind.Value && Input.GetKeyDown(KeyCode.L) && !KeyboardManager.Instance.IsViewShown)
@@ -116,19 +109,17 @@ public partial class MirrorDimensionMod : MelonMod
 
     IEnumerator WaitForLocalPlayer()
     {
-        while (PlayerSetup.Instance == null)
-            yield return null;
+        while (PlayerSetup.Instance == null) yield return null;
 
         // Shader which flips your screen horizontally
         var shader = typeof(MirrorDimensionMod).Assembly.GetManifestResourceStream("shaderbundle");
         var flipPrefab = AssetBundle.LoadFromStream(shader).LoadAsset<GameObject>("Flip.prefab");
-
-        flipObject = Object.Instantiate(flipPrefab, PlayerSetup.Instance.transform);
-        flipObject.name = "[MirrorDimension] Flip Shader";
-        flipObject.SetLayerRecursive(CVRLayers.UIInternal);
-        var renderer = flipObject.GetComponentInChildren<Renderer>();
+        FlipObject = Object.Instantiate(flipPrefab, PlayerSetup.Instance.transform);
+        FlipObject.name = "[MirrorDimension] Flip Shader";
+        FlipObject.SetLayerRecursive(CVRLayers.UIInternal);
+        var renderer = FlipObject.GetComponentInChildren<Renderer>();
         renderer.localBounds = new Bounds(Vector3.zero, new Vector3(999, 999, 999));
-        flipObject.SetActive(isFlipped);
+        FlipObject.SetActive(IsFlipped);
 
         // Put listeners on their own GameObjects so they can be flipped independently from the camera
         var listeners = GetAllObjects<AudioListener>();
@@ -137,7 +128,6 @@ public partial class MirrorDimensionMod : MelonMod
             var l = listeners[i];
             var newGo = new GameObject("[MirrorDimension] AudioListener");
             newGo.transform.SetParent(l.transform, false);
-
             var newL = newGo.AddComponent<AudioListener>();
             newL.enabled = l.enabled;
             newL.velocityUpdateMode = l.velocityUpdateMode;
@@ -149,20 +139,19 @@ public partial class MirrorDimensionMod : MelonMod
     {
         var origPos = PlayerSetup.Instance.GetPlayerPosition();
         var origRot = PlayerSetup.Instance.GetPlayerRotation();
-        isFlipped = !isFlipped;
-
+        IsFlipped = !IsFlipped;
         var left = IKSystem.Instance.leftController;
         var right = IKSystem.Instance.rightController;
         FlipScale(left.transform);
         FlipScale(right.transform);
-
         var leftSteamVr = left.GetComponent<SteamVR_TrackedControllerFix>();
         var rightSteamVr = right.GetComponent<SteamVR_TrackedControllerFix>();
         if (leftSteamVr != null && rightSteamVr != null)
         {
-            leftSteamVr.inputSource = isFlipped ? SteamVR_Input_Sources.RightHand : SteamVR_Input_Sources.LeftHand;
-            rightSteamVr.inputSource = isFlipped ? SteamVR_Input_Sources.LeftHand : SteamVR_Input_Sources.RightHand;
+            leftSteamVr.inputSource = IsFlipped ? SteamVR_Input_Sources.RightHand : SteamVR_Input_Sources.LeftHand;
+            rightSteamVr.inputSource = IsFlipped ? SteamVR_Input_Sources.LeftHand : SteamVR_Input_Sources.RightHand;
         }
+
         var leftXr = left.GetComponent<TrackedPoseDriver>();
         var rightXr = right.GetComponent<TrackedPoseDriver>();
         if (leftXr != null && rightXr != null)
@@ -171,6 +160,7 @@ public partial class MirrorDimensionMod : MelonMod
             Swap(ref leftXr.m_RotationInput, ref rightXr.m_RotationInput);
             Swap(ref leftXr.m_TrackingStateInput, ref rightXr.m_TrackingStateInput);
         }
+
         var leftXr2 = left.GetComponentInChildren<XRHandTrackingEvents>();
         var rightXr2 = right.GetComponentInChildren<XRHandTrackingEvents>();
         if (leftXr2 != null && rightXr2 != null)
@@ -185,7 +175,6 @@ public partial class MirrorDimensionMod : MelonMod
             {
                 // Skip CCK debugger, since it's already parented under quickmenu which gets flipped
                 if (obj.gameObject.name.Contains("[CCK.Debugger]")) continue;
-
                 var p = obj.transform.localPosition;
                 p.x *= -1;
                 obj.transform.localPosition = p;
@@ -194,12 +183,12 @@ public partial class MirrorDimensionMod : MelonMod
         }
 
         FlipVideoPlayers();
-
-        foreach (var obj in Object.FindObjectsByType(cameraIndicatorType, FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var obj in Object.FindObjectsByType(_cameraIndicatorType, FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
         {
             FixCameraIndicatorPlate.Postfix(obj);
         }
-        
+
         foreach (var obj in GetAllObjects<ChatBoxBubbleBehavior>())
         {
             FixChatBox.Postfix(obj);
@@ -210,16 +199,18 @@ public partial class MirrorDimensionMod : MelonMod
             FlipScale(obj.transform);
         }
 
-        if (flipObject != null)
+        if (FlipObject != null)
         {
-            flipObject.GetComponentInChildren<Renderer>().sortingOrder = MetaPort.Instance.isUsingVr ? 32 : 0;
-            flipObject.SetActive(isFlipped);
+            FlipObject.GetComponentInChildren<Renderer>().sortingOrder = MetaPort.Instance.isUsingVr ? 32 : 0;
+            FlipObject.SetActive(IsFlipped);
         }
 
         FlipScale(PlayerSetup.Instance.vrCameraRig.transform);
         FlipScale(PlayerSetup.Instance.vrCamera.transform);
-
-        ApplyGlobalTransform(PlayerSetup.Instance.transform, PlayerSetup.Instance.GetPlayerPosition(), PlayerSetup.Instance.GetPlayerRotation(), origPos, origRot);
+        ApplyGlobalTransform(PlayerSetup.Instance.transform, PlayerSetup.Instance.GetPlayerPosition(),
+            PlayerSetup.Instance.GetPlayerRotation(), origPos, origRot);
+        
+        foreach (var obj in GetAllObjects<CVR_MenuManager>()) obj.ApplyVrAnchorOffsetsToTransforms();
 
         // TODO: right now if one event handler throws, it prevents all handlers after it too
         OnFlip?.Invoke();
@@ -227,7 +218,7 @@ public partial class MirrorDimensionMod : MelonMod
 
     public static void FlipVideoPlayers()
     {
-        var newScale = isFlipped && Config.FlipVideos.Value ? new Vector4(-1, 1, 0, 0) : new Vector4(1, 1, 0, 0);
+        var newScale = IsFlipped && Config.FlipVideos.Value ? new Vector4(-1, 1, 0, 0) : new Vector4(1, 1, 0, 0);
         foreach (var obj in GetAllObjects<CVRVideoPlayer>())
         {
             obj?._blitMaterial.SetVector("_Scale", newScale);
@@ -235,19 +226,13 @@ public partial class MirrorDimensionMod : MelonMod
     }
 
     // Applies a desired global transform to a child object by modifying the parent's global transform
-    static void ApplyGlobalTransform(
-        Transform parent,
-        Vector3 currentChildGlobalPos,
-        Quaternion currentChildGlobalRot,
-        Vector3 desiredChildGlobalPos,
-        Quaternion desiredChildGlobalRot)
+    static void ApplyGlobalTransform(Transform parent, Vector3 currentChildGlobalPos, Quaternion currentChildGlobalRot,
+        Vector3 desiredChildGlobalPos, Quaternion desiredChildGlobalRot)
     {
         Vector3 localPos = parent.InverseTransformPoint(currentChildGlobalPos);
         Quaternion localRot = Quaternion.Inverse(parent.rotation) * currentChildGlobalRot;
-
         Quaternion newParentRot = desiredChildGlobalRot * Quaternion.Inverse(localRot);
         Vector3 newParentPos = desiredChildGlobalPos - (newParentRot * localPos);
-
         parent.rotation = newParentRot;
         parent.position = newParentPos;
     }
@@ -259,25 +244,47 @@ public partial class MirrorDimensionMod : MelonMod
         ls.x *= -1;
         t.localScale = ls;
     }
+
     public static void FlipScaleSafe(Transform t)
     {
         var objFlipped = t.localScale.x < 0;
-        if (isFlipped != objFlipped)
-            FlipScale(t);
+        if (IsFlipped != objFlipped) FlipScale(t);
     }
+
+    public static Vector3 Flipped(Vector3 orig)
+    {
+        var temp = orig;
+        temp.x *= -1;
+        return temp;
+    }
+
+    public static Quaternion Flipped(Quaternion orig)
+    {
+        var temp = orig;
+        temp.y *= -1;
+        temp.z *= -1;
+        return temp;
+    }
+    
+
     public static T[] GetAllObjects<T>() where T : Object
     {
         return Object.FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
     }
 
+    public static CVRHand GetOther(CVRHand original)
+    {
+        return original == CVRHand.Right ? CVRHand.Left : CVRHand.Right;
+    }
+
     #region Flip controls
+
     [HarmonyPatch(typeof(CVRInputManager), nameof(CVRInputManager.Update))]
     public class MirrorFlipInput
     {
         public static void Postfix(CVRInputManager __instance)
         {
-            if (!isFlipped) return;
-
+            if (!IsFlipped) return;
             __instance.movementVector.x *= -1;
             __instance.objectRotationValue.x *= -1;
             __instance.rawLookVector.x *= -1;
@@ -293,6 +300,7 @@ public partial class MirrorDimensionMod : MelonMod
                 Swap(ref __instance.gripLeftDown, ref __instance.gripRightDown);
                 Swap(ref __instance.gripLeftUp, ref __instance.gripRightUp);
             }
+
             Swap(ref __instance.gripLeftValue, ref __instance.gripRightValue);
             Swap(ref __instance.gestureLeftRaw, ref __instance.gestureRightRaw);
             // TODO: should I swap these? not sure what they do
@@ -325,12 +333,14 @@ public partial class MirrorDimensionMod : MelonMod
             Swap(ref __instance.fingerSpreadLeftPinky, ref __instance.fingerSpreadRightPinky);
         }
     }
+
     public static void Swap<T>(ref T a, ref T b)
     {
         T temp = a;
         a = b;
         b = temp;
     }
+
     public static void Swap2<T>(ref T left, ref T right)
     {
         T temp = left;
@@ -343,17 +353,21 @@ public partial class MirrorDimensionMod : MelonMod
             right = temp;
         }
     }
+
     #endregion
 
     #region Fix Scrolling
+
     [HarmonyPatch(typeof(CVRInputModule_XR), nameof(CVRInputModule_XR.Update_Interaction))]
     public class MirrorFlipScrolling
     {
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var found = false;
-            var lookFor1 = AccessTools.Method(typeof(CVRInputModule_XR), nameof(CVRInputModule_XR.GetModuleForLookHand));
-            var lookFor2 = AccessTools.Method(typeof(CVRInputModule_XR), nameof(CVRInputModule_XR.GetModuleForMovementHand));
+            var lookFor1 =
+                AccessTools.Method(typeof(CVRInputModule_XR), nameof(CVRInputModule_XR.GetModuleForLookHand));
+            var lookFor2 = AccessTools.Method(typeof(CVRInputModule_XR),
+                nameof(CVRInputModule_XR.GetModuleForMovementHand));
             foreach (var code in codes)
             {
                 var isLook = code.Calls(lookFor1);
@@ -361,80 +375,124 @@ public partial class MirrorDimensionMod : MelonMod
                 {
                     found = true;
                     yield return new(isLook ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new(OpCodes.Call, AccessTools.Method(typeof(MirrorFlipScrolling), nameof(MirrorFlipScrolling.GetModule)));
+                    yield return new(OpCodes.Call,
+                        AccessTools.Method(typeof(MirrorFlipScrolling), nameof(MirrorFlipScrolling.GetModule)));
                 }
                 else
                 {
                     yield return code;
                 }
             }
+
             if (!found)
             {
                 MelonLogger.Error("Transpiler patch failed: MirrorFlipScrolling!");
             }
         }
+
         public static CVRXRModule GetModule(CVRInputModule_XR instance, bool isLook)
         {
-            return isFlipped ^ isLook ? instance.GetModuleForLookHand() : instance.GetModuleForMovementHand();
+            return IsFlipped ^ isLook ? instance.GetModuleForLookHand() : instance.GetModuleForMovementHand();
         }
     }
+
     [HarmonyPatch(typeof(CVRInputManager), nameof(CVRInputManager.IsControllerPointedAtMenu))]
     public class MirrorFlipMenuPointer
     {
         public static void Prefix(ref bool isLeftController)
         {
-            if (isFlipped)
+            if (IsFlipped)
             {
                 isLeftController = !isLeftController;
             }
         }
     }
+
     #endregion
 
     #region Fix Vibrations
+
     [HarmonyPatch(typeof(CVRInputManager), nameof(CVRInputManager.Vibrate))]
     public class MirrorFlipVibrate
     {
         public static void Prefix(ref CVRHand hand)
         {
-            if (!isFlipped) return;
-            hand = (CVRHand) (1 - (int) hand);
+            if (!IsFlipped) return;
+            hand = GetOther(hand);
         }
     }
+
     #endregion
 
     #region Fix swapping avatars or changing player height ruining the mirror effect
+
     [HarmonyPatch(typeof(PlayerSetup), nameof(PlayerSetup.SetPlaySpaceScale))]
     public static class FixPlayerSetup
     {
         public static void Postfix(PlayerSetup __instance)
         {
-            if (isFlipped) FlipScale(__instance.vrCameraRig.transform);
+            if (IsFlipped) FlipScale(__instance.vrCameraRig.transform);
         }
     }
+
     #endregion
 
     #region Fix the quickmenu being positioned on the wrong hand
+
     [HarmonyPatch(typeof(CVR_MenuManager), nameof(CVR_MenuManager.SelectedQuickMenuHand), MethodType.Getter)]
     public static class FixQuickMenuHand
     {
-        // TODO: due to the way this works, if you offset your menu, it will be at a different offset after flipping
         public static bool Prefix(ref CVRHand __result)
         {
-            if (!isFlipped) return true;
-            __result = __result == CVRHand.Right ? CVRHand.Left : CVRHand.Right;
+            if (!IsFlipped) return true;
+            __result = GetOther(__result);
             return false;
         }
     }
+
+    [HarmonyPatch(typeof(CVR_MenuManager), nameof(CVR_MenuManager.ApplyVrAnchorOffsetsToTransforms))]
+    public static class FixQuickMenuOffsetLoad
+    {
+        public static bool Prefix(CVR_MenuManager __instance)
+        {
+            if (!IsFlipped) return true;
+            __instance._rightVrAnchor.transform.localPosition = Flipped(__instance._settings.quickMenuPositionOffset);
+            __instance._rightVrAnchor.transform.localRotation = Flipped(Quaternion.Euler(__instance._settings.quickMenuRotationOffset));
+            __instance._leftVrAnchor.transform.localPosition = Flipped(__instance._settings.quickMenuRightPositionOffset);
+            __instance._leftVrAnchor.transform.localRotation = Flipped(Quaternion.Euler(__instance._settings.quickMenuRightRotationOffset));
+            return false;
+        }
+    }
+    [HarmonyPatch(typeof(CVR_MenuManager), nameof(CVR_MenuManager.ExitRepositionMode))]
+    public static class FixQuickMenuOffsetSave
+    {
+        public static void Postfix(CVR_MenuManager __instance)
+        {
+            if (!IsFlipped) return;
+            Transform transform = __instance.GetVRAnchor().transform;
+            if (__instance.SelectedQuickMenuHand == CVRHand.Right)
+            {
+                __instance._settings.quickMenuPositionOffset = Flipped(transform.localPosition);
+                __instance._settings.quickMenuRotationOffset = Flipped(Quaternion.Euler(transform.localEulerAngles)).eulerAngles;
+            }
+            else
+            {
+                __instance._settings.quickMenuRightPositionOffset = Flipped(transform.localPosition);
+                __instance._settings.quickMenuRightRotationOffset = Flipped(Quaternion.Euler(transform.localEulerAngles)).eulerAngles;
+            }
+        }
+    }
+
     #endregion
 
     #region Fix Nameplates and Camera Nameplates
+
     [HarmonyPatch(typeof(PlayerNameplate), nameof(PlayerNameplate.Update))]
     public static class FixNameplates
     {
         public static void Postfix(PlayerNameplate __instance)
         {
-            foreach (Transform r in __instance.s_Nameplate.transform)
+            foreach (Transform r in __instance.contentGo.transform)
             {
                 FlipScaleSafe(r);
             }
@@ -447,16 +505,20 @@ public partial class MirrorDimensionMod : MelonMod
         {
             try
             {
-                var img = (Image) Traverse.Create(__instance).Field("nameplateBackground").GetValue();
+                var img = (Image)Traverse.Create(__instance).Field("nameplateBackground").GetValue();
                 FlipScaleSafe(img.transform.parent);
             }
             catch
-            { }
+            {
+                // ignored
+            }
         }
     }
+
     #endregion
 
     #region Fix ChatBox
+
     [HarmonyPatch(typeof(ChatBoxBubbleBehavior), nameof(ChatBoxBubbleBehavior.OnMessage))]
     public static class FixChatBox
     {
@@ -465,9 +527,11 @@ public partial class MirrorDimensionMod : MelonMod
             FlipScaleSafe(__instance.textBubbleTransform.transform);
         }
     }
+
     #endregion
 
     #region Swap Gestures
+
     [HarmonyPatch]
     public class MirrorFlipGestures
     {
@@ -478,22 +542,28 @@ public partial class MirrorDimensionMod : MelonMod
             yield return AccessTools.Method(typeof(GestureIndicator), nameof(GestureIndicator.GetRightGestureIndex));
         }
 
-        private static FieldInfo leftHand = AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager.gestureLeft));
-        private static FieldInfo rightHand = AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager.gestureRight));
+        private static readonly FieldInfo LeftHand =
+            AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager.gestureLeft));
+
+        private static readonly FieldInfo RightHand =
+            AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager.gestureRight));
+
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var found = false;
             foreach (var code in codes)
             {
                 yield return code;
-                var isLeft = code.Is(OpCodes.Ldfld, leftHand);
-                if (isLeft || code.Is(OpCodes.Ldfld, rightHand))
+                var isLeft = code.Is(OpCodes.Ldfld, LeftHand);
+                if (isLeft || code.Is(OpCodes.Ldfld, RightHand))
                 {
                     found = true;
                     yield return new(isLeft ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new(OpCodes.Call, AccessTools.Method(typeof(MirrorFlipGestures), nameof(MirrorFlipGestures.GetGesture)));
+                    yield return new(OpCodes.Call,
+                        AccessTools.Method(typeof(MirrorFlipGestures), nameof(MirrorFlipGestures.GetGesture)));
                 }
             }
+
             if (!found)
             {
                 MelonLogger.Error("Transpiler patch failed: MirrorFlipGestures!");
@@ -502,42 +572,48 @@ public partial class MirrorDimensionMod : MelonMod
 
         public static float GetGesture(float orig, bool isLeft)
         {
-            if (!isFlipped) return orig;
+            if (!IsFlipped) return orig;
             return isLeft ? CVRInputManager.Instance.gestureRight : CVRInputManager.Instance.gestureLeft;
         }
     }
+
     #endregion
 
     #region Swap Controller Tracking State
+
     [HarmonyPatch]
     public class MirrorFlipControllers
     {
-
         public static IEnumerable<MethodBase> TargetMethods()
         {
             yield return AccessTools.Method(typeof(CVRInputModule_XR), nameof(CVRInputModule_XR.UpdateInput));
         }
 
-        private static FieldInfo leftHand = AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager._leftController));
-        private static FieldInfo rightHand = AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager._rightController));
+        private static readonly FieldInfo LeftHand =
+            AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager._leftController));
+
+        private static readonly FieldInfo RightHand =
+            AccessTools.Field(typeof(CVRInputManager), nameof(CVRInputManager._rightController));
 
         public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> codes)
         {
             var found = false;
             foreach (var code in codes)
             {
-                var isLeft = code.Is(OpCodes.Stfld, leftHand);
-                if (isLeft || code.Is(OpCodes.Stfld, rightHand))
+                var isLeft = code.Is(OpCodes.Stfld, LeftHand);
+                if (isLeft || code.Is(OpCodes.Stfld, RightHand))
                 {
                     found = true;
                     yield return new(isLeft ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    yield return new(OpCodes.Call, AccessTools.Method(typeof(MirrorFlipControllers), nameof(MirrorFlipControllers.SetController)));
+                    yield return new(OpCodes.Call,
+                        AccessTools.Method(typeof(MirrorFlipControllers), nameof(MirrorFlipControllers.SetController)));
                 }
                 else
                 {
                     yield return code;
                 }
             }
+
             if (!found)
             {
                 MelonLogger.Error("Transpiler patch failed: MirrorFlipControllers!");
@@ -547,15 +623,17 @@ public partial class MirrorDimensionMod : MelonMod
         public static void SetController(CVRInputManager instance, eXRControllerType val, bool isLeft)
         {
             // this is the first time I've used xor for boolean logic, neat
-            if (isFlipped ^ isLeft)
+            if (IsFlipped ^ isLeft)
                 instance._leftController = val;
             else
                 instance._rightController = val;
         }
     }
+
     #endregion
 
     #region Swap Full Body Tracker Roles
+
     [HarmonyPatch(typeof(TrackingSystem), nameof(TrackingSystem.Update))]
     public class MirrorFlipFbt
     {
@@ -570,7 +648,8 @@ public partial class MirrorDimensionMod : MelonMod
                 {
                     found = true;
                     yield return new(OpCodes.Dup);
-                    yield return new(OpCodes.Call, AccessTools.Method(typeof(MirrorFlipFbt), nameof(FlipAllTrackingPoints)));
+                    yield return new(OpCodes.Call,
+                        AccessTools.Method(typeof(MirrorFlipFbt), nameof(FlipAllTrackingPoints)));
                 }
             }
 
@@ -586,11 +665,11 @@ public partial class MirrorDimensionMod : MelonMod
             {
                 if (point?.displayObject == null) continue;
                 var pointFlipped = point.displayObject.name.Contains("[Flip]");
-                if (isFlipped != pointFlipped)
+                if (IsFlipped != pointFlipped)
                 {
                     point.assignedRole = FlipRole(point.assignedRole);
                     point.suggestedRole = FlipRole(point.suggestedRole);
-                    if (isFlipped)
+                    if (IsFlipped)
                     {
                         point.displayObject.name += " [Flip]";
                     }
@@ -602,6 +681,7 @@ public partial class MirrorDimensionMod : MelonMod
             }
         }
     }
+
     public static TrackingPoint.TrackingRole FlipRole(TrackingPoint.TrackingRole role)
     {
         switch (role)
@@ -630,7 +710,9 @@ public partial class MirrorDimensionMod : MelonMod
             default:
                 break;
         }
+
         return role;
     }
+
     #endregion
 }

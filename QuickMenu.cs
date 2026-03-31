@@ -22,16 +22,16 @@ public static class QuickMenu
 
         var flipToggle = category.AddToggle("Mirror Flip",
             "Enable to enter the mirror dimension.",
-            MirrorDimensionMod.isFlipped);
+            MirrorDimensionMod.IsFlipped);
         flipToggle.OnValueUpdated += b =>
         {
-            if (b == MirrorDimensionMod.isFlipped) return;
+            if (b == MirrorDimensionMod.IsFlipped) return;
             MirrorDimensionMod.DoAFlip();
         };
         MirrorDimensionMod.OnFlip += () =>
         {
-            if (MirrorDimensionMod.isFlipped == flipToggle.ToggleValue) return;
-            flipToggle.ToggleValue = MirrorDimensionMod.isFlipped;
+            if (MirrorDimensionMod.IsFlipped == flipToggle.ToggleValue) return;
+            flipToggle.ToggleValue = MirrorDimensionMod.IsFlipped;
         };
 
         var allowKeybindToggle = category.AddMelonToggle(Config.AllowKeybind);
