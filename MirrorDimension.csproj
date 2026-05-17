@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Version>0.2.1</Version>
+        <Version>0.2.2</Version>
         <Authors>art0007i</Authors>
         <RepositoryUrl>https://github.com/art0007i/MirrorDimension</RepositoryUrl>
         <TargetFramework>netstandard2.1</TargetFramework>

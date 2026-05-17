@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using ABI_RC.Systems.ContentClones;
 using UnityEngine;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.UI;
@@ -126,6 +127,8 @@ public partial class MirrorDimensionMod : MelonMod
         for (int i = listeners.Length - 1; i >= 0; i--)
         {
             var l = listeners[i];
+            // TODO: as of writing this audio listeners are on their own game object on nightly, once it's in stable, this entire for loop should be removed
+            if (l.gameObject.name.Contains("AudioListener")) continue;
             var newGo = new GameObject("[MirrorDimension] AudioListener");
             newGo.transform.SetParent(l.transform, false);
             var newL = newGo.AddComponent<AudioListener>();
@@ -712,6 +715,22 @@ public partial class MirrorDimensionMod : MelonMod
         }
 
         return role;
+    }
+
+    #endregion
+
+    #region Fix MiniMe being upside down in quick menu
+
+    [HarmonyPatch(typeof(MiniMe), nameof(MiniMe.UpdateQuickMenuPosition))]
+    public class MiniMeFixer
+    {
+        public static void Postfix()
+        {
+            if (IsFlipped && MiniMe._cloneHolderObject && MiniMe._cloneHolderObject.activeSelf)
+            {
+                MiniMe._cloneHolderObject.transform.localScale *= -1;
+            }
+        }
     }
 
     #endregion
